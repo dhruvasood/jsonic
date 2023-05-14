@@ -2,6 +2,8 @@ package org.kevin;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -30,7 +32,11 @@ public class SonicExecutor implements Closeable {
     private final InetSocketAddress addr;
 
     SonicExecutor(SonicSettings settings) {
-        loopGroup = new NioEventLoopGroup(settings.getMaxThreads());
+        if (Epoll.isAvailable()) {
+            loopGroup = new EpollEventLoopGroup(settings.getMaxThreads());
+        } else {
+            loopGroup = new NioEventLoopGroup(settings.getMaxThreads());
+        }
         poolGroup = new SonicPoolGroup(
                 loopGroup,
                 settings.getConnectTimeout(),
@@ -82,7 +88,6 @@ public class SonicExecutor implements Closeable {
         pool.acquire().addListener(new SonicChannelListener<>(pool, requestor, replier, promise));
     }
 
-    @PreDestroy
     public void close() throws IOException {
         if (null != poolGroup) {
             try {

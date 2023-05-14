@@ -4,6 +4,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.pool.AbstractChannelPoolMap;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import org.slf4j.Logger;
@@ -42,14 +43,15 @@ public class SonicPoolGroup extends AbstractChannelPoolMap<PoolKey, SonicPool> {
         }
         Bootstrap bootstrap = null;
         if(Epoll.isAvailable()){
-
+            bootstrap = new Bootstrap().channel(EpollSocketChannel.class).group(loopGroup);
         }else{
             bootstrap = new Bootstrap().channel(NioSocketChannel.class).group(loopGroup);
-            bootstrap.remoteAddress(poolKey.getAddr());
-            bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) connectTimeout);
-            bootstrap.option(ChannelOption.TCP_NODELAY, true);
-            bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
         }
+
+        bootstrap.remoteAddress(poolKey.getAddr());
+        bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) connectTimeout);
+        bootstrap.option(ChannelOption.TCP_NODELAY, true);
+        bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
 
         return new SonicPool(
                 bootstrap,
